@@ -477,7 +477,7 @@ Let's consider an example. We'll construct a block of code which has |Integer| v
 \end{tikzpicture}
 \end{center}
 
-> main = print stage3''''''
+< main = print stage3''''''
 
 \newcommand{\F}{\mathsf}
 %format pack  = "\F{pack}"
