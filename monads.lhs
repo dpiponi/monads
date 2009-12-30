@@ -414,7 +414,7 @@ Here's a familiar kind of flowchart:
 
 For now I want to concentrate on how we build these trees and then later talk about actually getting them to perform an action.
 
-The idea behind this one is that we have a state variable of some type and nodes to set and get this state. The |put| function represents putting its argument into the state, and the |get| function is used to represent a branch depending on the value of the state. We also have leaf nodes representing the final value of our computation.
+The idea is that we have a state variable of some type and nodes to set and get this state. The |put| function represents putting its argument into the state, and the |get| function is used to represent a branch depending on the value of the state. We also have leaf nodes representing the final value of our computation.
 
 More precisely, we have a type constructor |State| that builds a flowchart tree type from two types, |s| and |a|. |s| is the type of the state, and |a| is the type of the leaf nodes. We also have two functions, not part of the monad interface, that we can use to construct flowcharts. |put :: s -> State s ()| builds a tree that looks like this:
 
