@@ -26,15 +26,15 @@
 
 \begin{document} 
 
-\title{haskell Monads as Trees}
+\title{Monads are Trees}
 \authorinfo{Dan Piponi}{}{dpiponi@@gmail.com}
 \maketitle
 
 \section{Goals and Prerequisites}
-This article is intended to give a different approach to monads from the usual for readers unfamiliar with monads. The reader is expected to know some basics of Haskell, for example what a type class is and what a lambda term is. They are also expected to be familiar with the usual notion of a tree from computer science.
+This article is intended to give an elementary introduction to an aspect of monads not covered in most introductions. The reader is expected to know some basics of Haskell, for example what a type class is and what a lambda term is. They are also expected to be familiar with the usual notion of a tree from computer science.
 
 \section{Trees}
-Haskell type classes are interfaces shared by different types and Haskell's |Monad| type class is no different. It describes an interface common to many types of tree structure, all of which share the notion of a {\em leaf node} and {\em grafting}. These are straightforward notions from computer science and are easily illustrated.
+Haskell type classes are interfaces shared by different types, and Haskell's |Monad| type class is no different. It describes an interface common to many types of tree structure, all of which share the notion of a {\em leaf node} and {\em grafting}. These are straightforward notions from computer science and are easily illustrated.
 
 So let's start by looking at the type class definition:
 
@@ -42,7 +42,7 @@ So let's start by looking at the type class definition:
 <   return :: a -> m a
 <   (>>=) :: m a -> (a -> m b) -> m b
 
-Here |m| is a type constructor. Given a type |a| it constructs a new type |m a| with these two functions. We can make an instance of this class by defining a simple binary tree type:
+Here |m| is a type constructor. Given a type |a| it constructs a new type |m a| with these two functions. We can make an instance of this class by defining a binary tree type:
 
 > data Tree a = Fork (Tree a) (Tree a) | Leaf a | Nil deriving Show
 
@@ -50,7 +50,9 @@ Here |m| is a type constructor. Given a type |a| it constructs a new type |m a| 
 
 Here's a typical expression representing a tree:
 
-> tree1 = Fork (Fork (Leaf 2) Nil) (Fork (Leaf 2) (Leaf 3))
+> tree1 = Fork
+>   (Fork (Leaf 2) Nil)
+>   (Fork (Leaf 2) (Leaf 3))
 
 We can draw this in the standard way:
 
@@ -81,7 +83,7 @@ The function |return|, despite the name, is nothing more than a function for cre
 >   Leaf a   >>= f = f a
 >   Fork u v >>= f = Fork (u >>= f) (v >>= f)
 
-The idea is that given a tree we'll replace every leaf node with a new subtree. We need a scheme to be able to specify what trees are grafting in to replace which leaves. One way to do this is like this: we'll use the value stored in the leaf to specify what tree to graft in its place, and we'll make the specification by giving a function mapping leaf values to trees. I'll illustrate it pictorially first, with a simple tree. Consider:
+The idea is that given a tree we'll replace every leaf node with a new subtree. We need a scheme to be able to specify what trees we are grafting in to replace which leaves. One way to do this is like this: we'll use the value stored in the leaf to specify what tree to graft in its place, and we'll make the specification by giving a function mapping leaf values to trees. I'll illustrate it pictorially first, with a simple tree. Consider:
 
 > tree2 = Fork (Leaf 2) (Leaf 3)
 
@@ -102,8 +104,7 @@ The idea is that given a tree we'll replace every leaf node with a new subtree. 
 Now I want to graft these two trees into |tree2| so that the left one replaces |Leaf 2| and the right one replaces |Leaf 3|:
 \begin{center}
 \begin{tikzpicture}
-\tikzstyle{level 1}=[sibling distance=2in]
-\tikzstyle{level 2}=[sibling distance=1in]
+\tikzstyle{level 1}=[sibling distance=1.25in]
 \coordinate
     child {
         node {|Nil|}
@@ -111,12 +112,9 @@ Now I want to graft these two trees into |tree2| so that the left one replaces |
     child {
         node {|Leaf "Two"|}
     };
-\end{tikzpicture}
-\end{center}
-\begin{center}
-\begin{tikzpicture}
-\tikzstyle{level 1}=[sibling distance=2in]
-\tikzstyle{level 2}=[sibling distance=1in]
+
+\begin{scope}[xshift = 6cm]
+\tikzstyle{level 1}=[sibling distance=1.25in]
 \coordinate
     child {
         node {|Leaf "Three"|}
@@ -124,6 +122,8 @@ Now I want to graft these two trees into |tree2| so that the left one replaces |
     child {
         node {|Leaf "String"|}
     };
+\end{scope}
+
 \end{tikzpicture}
 \end{center}
 
@@ -155,7 +155,7 @@ We can now graft our tree using:
 
 I hope you can see that the implementation of |>>=| does nothing more than recursively walk the tree looking for leaf nodes to graft.
 
-All instances of |Monad| can be views as trees similar to this.
+Instances of |Monad| can be viewed as trees similar to this.
 
 \section{Computations}
 If this interface were merely for building tree structures it wouldn't be all that interesting. Where it starts to get useful is when we use trees to represent different ways to organise a computation. For example, consider the kind of combinatorial search involved in finding the best move in a game. Or consider decision-tree flowcharts or probability trees. Even simple ordered linear sequences of operations form a kind of degenerate tree without branching. The monad interface can be used with all of these structures giving a uniform way of working with them.
@@ -163,7 +163,7 @@ If this interface were merely for building tree structures it wouldn't be all th
 \section{Combinatorial Search}
 Let's start by putting the |Tree| example above to work. Combinatorial search trees can quickly grow too large to fit on a page so I'm deliberately going to pick a particularly simple problem to solve so that every part of it can be laid bare.
 
-Let S be the set $\{2,5\}$ and suppose we wish to find all of the possible ways we can form the sum of three numbers chosen from this set (with possible repeats). For example $2+5+2$ or $5+5+5$. We can break this problem down into three steps, picking a number at each stage. We can draw a diagram representing the possibilities as follows:
+Let S be the set $\{2,5\}$ and suppose we wish to find all of the possible ways we can form the sum of three numbers chosen from this set (with possible repeats). For example $2+5+2$ or $5+5+5$. We can break this problem down into three stages, picking a number at each stage. We can draw a diagram representing the possibilities as follows:
 
 \begin{center}
 \begin{tikzpicture}
@@ -183,7 +183,7 @@ The Haskell code is:
 
 > tree4 = Fork (return 2) (return 5)
 
-Now we wish to construct the tree for the next stage. We want to replace the left node with a subtree that represents the two possibilities we might get given that we picked $2$ at the first stage. Similarly we want to replace the right leaf with the possibilities that start with $5$. In other words, we want to replace |Leaf n| with the tree
+Now we wish to construct the tree for the next stage. We want to replace the left node with a subtree that represents the two possibilities we might get given that we picked $2$ at the first stage. Similarly we want to replace the right leaf with the possibilities that start with $5$. In other words, in both cases we want to replace |Leaf n| with the tree
 
 \begin{center}
 \begin{tikzpicture}
@@ -219,11 +219,11 @@ We can reorganise this code a little. A helper |fork| function saves on typing:
 
 I've implemented |choose| as a separate function but we could write out everything longhand as follows:
 
-> stage3' = (fork 2 5 >>= \a ->
->            fork (a+2) (a+5)) >>= \b ->
->            fork (b+2) (b+5)
+> stage3' = (  fork 2 5           >>= \a ->
+>              fork (a+2) (a+5))  >>= \b ->
+>              fork (b+2) (b+5)
 
-I've simply substituted lambda terms for the function choose. We can now see the three stages clearly as one line after another. We can read this code from top to bottom as a sequence of three operations interpreting the |fork| function as something like the Unix |fork| function. After a fork, the remainder of the lines of code are executed {\em twice}, each time using a different value. Writing it out fully makes it clear that we can easily change the choice at each line,
+I've simply substituted lambda terms for the function choose. We can now see the three stages clearly as one line after another. We can read this code from top to bottom as a sequence of three operations interpreting the |fork| function as something like the Unix |fork| function. After a fork, the remainder of the lines of code are executed {\em twice}, each time using a different value. Writing it out fully makes it clear that we can easily change the choice at each line, for example to use sets other than $\{2, 5\}$.
 
 An important thing to notice about our three stage tree is that there were two ways of building it. I first built a two stage tree and then grafted a one stage tree into each of its leaves. But I could have built a one stage tree and substituted a two stage tree into each of its leaves. We can see this diagrammatically as:
 
@@ -233,7 +233,7 @@ Our alternative code looks like this:
 >            fork (a+2) (a+5) >>= \b ->
 >            fork (b+2) (b+5)
 
-It's almost the same, I just removed parentheses.
+It's almost the same, I just removed a pair of parentheses.
 
 We can try to step back a bit and think about what that code means. Each time we see |... >>= \a -> ...| we can think of |a| as a handle onto the leaves of the tree on the left and the tree on the right is what those leaves get replaced with. If we're going to do lots of grafting with lambda terms like this then it'd be nice to have special syntax. This is exactly what Haskell |do| notation provides. After a |do|, this fragment of code can be written as
 
