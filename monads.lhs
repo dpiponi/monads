@@ -2,10 +2,15 @@
 \usepackage{amsmath} 
 \usepackage{amssymb} 
 \usepackage{graphicx} 
+\usepackage{hyperref}
+
+%if False
+
+> main = print stage3''''''
+
+%endif
 \usepackage{eepic}
 \usepackage{tikz}
-\newcommand{\cL}{{\cal L}} 
-\newcommand{\2}{^{\underline{2}}}
 \usetikzlibrary{shapes,arrows}
 
 %include lhs2TeX.fmt
@@ -14,7 +19,8 @@
 %options ghci
 %if False
 
---> import Prelude hiding (Monad(..))
+> import Control.Monad.State
+> import Control.Monad.Error
 
 %endif
 
@@ -23,9 +29,6 @@
 \title{Monads}
 \authorinfo{Dan Piponi}{}{dpiponi@@gmail.com}
 \maketitle
-
-\section{Why Another Tutorial?}
-
 
 \section{Trees}
 Haskell type classes are interfaces shared by different types and Haskell's |Monad| type class is no different. It describes an interface common to many types of tree structure, all of which share the notion of a {\em leaf node} and {\em grafting}. These are straightforward notions from computer science and are easily illustrated.
@@ -479,9 +482,51 @@ Let's consider an example. We'll construct a block of code which has |Integer| v
 \end{tikzpicture}
 \end{center}
 
+Note that though we have drawn two branches we are still representing an infinite number of branches. All of the branches corresponding to even values returned by |get| are going to the left and the rest are going to the right. We'll need a selective grafting rule that grafts one thing for even values and another for odd values. We can start with
 
+< do
+<   get
 
-< main = print stage3''''''
+which simply gives us a tree with levaes corresponding to the value of the state. Now we want to graft a simple leaf containing a string on the left.
+
+< do
+<   s <- get
+<   if even s
+<       then do
+<         return "even"
+<       else ...
+
+On the right we need to graft twice. So we get
+
+< do
+<   s <- get
+<   if even s
+<       then do
+<           return "even"
+<       else do
+<           _ <- put (s+1)
+<           return "odd"
+
+We don't care about the leaf value that |put| gives us so I stored the result in |_|. Haskell do-notation allows us to simplify that further by simply omitting the |_ <-|. So here is the final function to build our tree:
+
+> ex1 = do
+>   s <- get
+>   if even s
+>       then do
+>           return "even"
+>       else do
+>           put (s+1)
+>           return "odd"
+
+Despite this code using an abstract interface to build trees, it looks remarkably like straightforward imperative code. In a sense it is - we're building an abstract syntax tree for an imperative mini-DSL inside Haskell. The last step is to actually interpret the tree. The standard prelude provides a Haskell function |runState :: State s a -> s -> (a, s)| that converts one of these trees to a function that takes an initial state value as argument, and returns both the final leaf value and the final state. We can test it out:
+
+> go1 = runState ex1 26
+> go2 = runState ex1 27
+
+You might think this is all inefficient, first building a tree, and then implementing it. But the same trick as with the list monad is used. The |State| type is simply a wrapper around the final type we want, |s -> (a, s)| and a suitable value is constructed at each graft.
+
+\section{Summary}
+Instances of type class |Monad| can be thought of as trees describing `computations'. The |Monad| interface provides a way to graft subtrees into trees. There are as many types of `computation' as there are interpreters for tree structures. In practice the interpretation is interleaved with the graft operation so that we don't have separate tree-building and interpretation phases.
 
 \newcommand{\F}{\mathsf}
 %format pack  = "\F{pack}"
