@@ -1,9 +1,5 @@
-\documentclass[preprint,onecolumn]{sigplanconf} 
-\usepackage{amsmath} 
-\usepackage{amssymb} 
-\usepackage{graphicx} 
+\documentclass{article} 
 \usepackage{hyperref}
-\usepackage{eepic}
 \usepackage{tikz}
 \usetikzlibrary{shapes,arrows}
 
@@ -20,11 +16,11 @@
 \begin{document} 
 
 \title{Monads are Trees}
-\authorinfo{Dan Piponi}{}{dpiponi@@gmail.com}
+\author{Dan Piponi\\\href{http://blog.sigfpe.com}{A Neighborhood of Infinity}}
 \maketitle
 
 \section{Goals and Prerequisites}
-This article is intended to give an elementary introduction to an aspect of monads not covered in most introductions. The reader is expected to know some basics of Haskell, for example what a type class is and what a lambda term is. They are also expected to be familiar with the usual notion of a tree from computer science.
+This article is intended to give an elementary introduction to an aspect of monads not covered in most introductions. The reader is expected to know some basics of Haskell, for example what a type class is and what a lambda term is. They are also expected to be familiar with the usual notion of a tree from computer science. No category theory mentioned anywhere but in this sentence.
 
 The original \href{https://dl.dropbox.com/u/828035/Monads/monads.lhs}{source code} to this document is written in literate Haskell and can be executed with ghc.
 
@@ -427,7 +423,7 @@ For now I want to concentrate on how we build these trees and then later talk ab
 
 The idea now is that we have a mutable state variable of some type and nodes to set and get this state. The |put| function represents putting its argument into the state. The |get| function is used to represent getting data from the current state, selecting a branch below according to its value. We also have leaf nodes representing the final value of our computation. With the list monad, a branching tree meant executing all branches. With the |State| monad we'll just execute one branch at any branch point, the one corresponding to the value in the state at that point.
 
-More precisely, we have a type constructor |State| that builds a flowchart tree type from two types, |s| and |a|. |s| is the type of the state, and |a| is the type of the leaf nodes. We also have two functions, not part of the monad interface, that we can use to construct flowcharts. |put :: s -> State s ()| builds a tree that looks like this:
+More precisely, we have a type constructor |State| that builds a flowchart tree type, |State s a|, from two types, |s| and |a|. |s| is the type of the state, and |a| is the type of the leaf nodes. We also have two functions, not part of the monad interface, that we can use to construct flowcharts. |put :: s -> State s ()| builds a tree that looks like this:
 
 \begin{center}
 \begin{tikzpicture}[node distance = 3cm, auto]
@@ -539,12 +535,4 @@ Instances of type class |Monad| can be thought of as trees describing `computati
 \section{Technical Note for the Mathematically Inclined}
 Describing monads as trees with grafting is slightly inaccurate. Apart from in the |Tree| case, in the examples above |>>=| doesn't just graft, it also performs a reduction operation of some sort. However, it is accurate to talk of elements of these monads as representing equivalence classes of trees. In this case |>>=| is grafting lowered to the space of trees modulo the equivalence.
 
-\newcommand{\F}{\mathsf}
-%format pack  = "\F{pack}"
-
-\newcommand{\pack}{{pack}}
-\newcommand{\unpack}{{unpack}}
-
-%\bibliographystyle{plain}
-%\bibliography{monads}
 \end{document} 
