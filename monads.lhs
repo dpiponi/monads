@@ -6,7 +6,7 @@
 
 %if False
 
-> main = print stage3''''''
+> main = print stage3_v7
 
 %endif
 \usepackage{eepic}
@@ -33,6 +33,8 @@
 \section{Goals and Prerequisites}
 This article is intended to give an elementary introduction to an aspect of monads not covered in most introductions. The reader is expected to know some basics of Haskell, for example what a type class is and what a lambda term is. They are also expected to be familiar with the usual notion of a tree from computer science.
 
+The original source code to this document is written in literate Haskell and can be executed with ghc.
+
 \section{Trees}
 Haskell type classes are interfaces shared by different types, and Haskell's |Monad| type class is no different. It describes an interface common to many types of tree structure, all of which share the notion of a {\em leaf node} and {\em grafting}. These are straightforward notions from computer science and are easily illustrated.
 
@@ -42,7 +44,7 @@ So let's start by looking at the type class definition:
 <   return :: a -> m a
 <   (>>=) :: m a -> (a -> m b) -> m b
 
-Here |m| is a type constructor. Given a type |a| it constructs a new type |m a| with these two functions. We can make an instance of this class by defining a binary tree type:
+Here |m| is a type constructor. Given a type |a|, |m a| is a new type with these two functions. We can make an instance of this class by defining a binary tree type:
 
 > data Tree a = Fork (Tree a) (Tree a) | Leaf a | Nil deriving Show
 
@@ -56,18 +58,21 @@ Here's a typical expression representing a tree:
 
 We can draw this in the standard way:
 
+\tikzstyle{leaf} = [draw, fill=green!20, 
+    text centered, rounded corners, minimum height=1em]
+\tikzstyle{nonleaf} = []
 \begin{center}
 \begin{tikzpicture}
 \tikzstyle{level 1}=[sibling distance=2in]
 \tikzstyle{level 2}=[sibling distance=1in]
 \coordinate
     child {
-        child {node {|Leaf 2|}}
-        child {node {|Nil|}}
+        child {node[leaf] {|Leaf 2|}}
+        child {node[nonleaf] {|Nil|}}
     }
     child {
-        child {node {|Leaf 2|}}
-        child {node {|Leaf 3|}}
+        child {node[leaf] {|Leaf 2|}}
+        child {node[leaf] {|Leaf 3|}}
     };
 \end{tikzpicture}
 \end{center}
@@ -93,10 +98,10 @@ The idea is that given a tree we'll replace every leaf node with a new subtree. 
 \tikzstyle{level 2}=[sibling distance=1in]
 \coordinate
     child {
-        node {|Leaf 2|}
+        node[leaf] {|Leaf 2|}
     }
     child {
-        node {|Leaf 3|}
+        node[leaf] {|Leaf 3|}
     };
 \end{tikzpicture}
 \end{center}
@@ -107,20 +112,20 @@ Now I want to graft these two trees into |tree2| so that the left one replaces |
 \tikzstyle{level 1}=[sibling distance=1.25in]
 \coordinate
     child {
-        node {|Nil|}
+        node[nonleaf] {|Nil|}
     }
     child {
-        node {|Leaf "Two"|}
+        node[leaf] {|Leaf "Two"|}
     };
 
 \begin{scope}[xshift = 6cm]
 \tikzstyle{level 1}=[sibling distance=1.25in]
 \coordinate
     child {
-        node {|Leaf "Three"|}
+        node[leaf] {|Leaf "Three"|}
     }
     child {
-        node {|Leaf "String"|}
+        node[leaf] {|Leaf "x"|}
     };
 \end{scope}
 
@@ -134,12 +139,12 @@ The result should be:
 \tikzstyle{level 2}=[sibling distance=1in]
 \coordinate
     child {
-        child {node {|Nil|}}
-        child {node {|Leaf "Two"|}}
+        child {node[nonleaf] {|Nil|}}
+        child {node[leaf] {|Leaf "Two"|}}
     }
     child {
-        child {node {|Leaf "Three"|}}
-        child {node {|Leaf "String"|}}
+        child {node[leaf] {|Leaf "Three"|}}
+        child {node[leaf] {|Leaf "x"|}}
     };
 \end{tikzpicture}
 \end{center}
@@ -158,6 +163,9 @@ I hope you can see that the implementation of |>>=| does nothing more than recur
 Instances of |Monad| can be viewed as trees similar to this.
 
 \section{Computations}
+\begin{quote}
+``Monads turn control flow into data flow, where it can be constrained by the type system.'' — Oleg Kiselyov
+\end{quote}
 If this interface were merely for building tree structures it wouldn't be all that interesting. Where it starts to get useful is when we use trees to represent different ways to organise a computation. For example, consider the kind of combinatorial search involved in finding the best move in a game. Or consider decision-tree flowcharts or probability trees. Even simple ordered linear sequences of operations form a kind of degenerate tree without branching. The monad interface can be used with all of these structures giving a uniform way of working with them.
 
 \section{Combinatorial Search}
@@ -171,14 +179,13 @@ Let S be the set $\{2,5\}$ and suppose we wish to find all of the possible ways 
 \tikzstyle{level 2}=[sibling distance=1in]
 \coordinate
     child {
-        node {|Leaf 2|}
+        node[leaf] {|Leaf 2|}
     }
     child {
-        node {|Leaf 5|}
+        node[leaf] {|Leaf 5|}
     };
 \end{tikzpicture}
 \end{center}
-
 The Haskell code is:
 
 > tree4 = Fork (return 2) (return 5)
@@ -191,14 +198,13 @@ Now we wish to construct the tree for the next stage. We want to replace the lef
 \tikzstyle{level 2}=[sibling distance=1in]
 \coordinate
     child {
-        node {|Leaf (n+2)|}
+        node[leaf] {|Leaf (n+2)|}
     }
     child {
-        node {|Leaf (n+5)|}
+        node[leaf] {|Leaf (n+5)|}
     };
 \end{tikzpicture}
 \end{center}
-
 In other words, we want to graft with the function
 
 > choose n = Fork (Leaf (n+2)) (Leaf (n+5))
@@ -209,9 +215,9 @@ Our two stage tree is given by
 
 Now we want to replace each of these leaf nodes with a new subtree. We can reuse our rule to get
 
-> stage3 = stage2 >>= choose
+> stage3_v1 = stage2 >>= choose
 
-If you run the code you'll see that |stage3| has all of the possibilities stored in the tree and we have solved our problem.
+If you run the code you'll see that |stage3_v1| has all of the possibilities stored in the tree and we have solved our problem.
 
 We can reorganise this code a little. A helper |fork| function saves on typing:
 
@@ -219,7 +225,7 @@ We can reorganise this code a little. A helper |fork| function saves on typing:
 
 I've implemented |choose| as a separate function but we could write out everything longhand as follows:
 
-> stage3' = (  fork 2 5           >>= \a ->
+> stage3_v2 = (  fork 2 5           >>= \a ->
 >              fork (a+2) (a+5))  >>= \b ->
 >              fork (b+2) (b+5)
 
@@ -229,9 +235,9 @@ An important thing to notice about our three stage tree is that there were two w
 
 Our alternative code looks like this:
 
-> stage3'' = fork 2 5 >>= \a ->
->            fork (a+2) (a+5) >>= \b ->
->            fork (b+2) (b+5)
+> stage3_v3 =  fork 2 5          >>= \a ->
+>             fork (a+2) (a+5)  >>= \b ->
+>             fork (b+2) (b+5)
 
 It's almost the same, I just removed a pair of parentheses.
 
@@ -242,7 +248,7 @@ We can try to step back a bit and think about what that code means. Each time we
 
 So we can rewrite our code yet again as
 
-> stage3''' = do
+> stage3_v4 = do
 >   a <- fork 2 5
 >   b <- fork (a+2) (a+5)
 >   fork (b+2) (b+5)
@@ -305,13 +311,13 @@ It seems a little inefficient to build a tree and then discard it at the end. It
 \tikzstyle{level 2}=[sibling distance=1in]
 \coordinate
     child {
-        node {|Leaf 1|}
+        node[leaf] {|Leaf 1|}
     }
     child {
-        node {|Leaf 2|}
+        node[leaf] {|Leaf 2|}
     }
     child {
-        node {|Leaf 2|}
+        node[leaf] {|Leaf 2|}
     };
 \end{tikzpicture}
 \end{center}
@@ -323,16 +329,16 @@ The problem now is that grafting seems like it ought to make the tree deeper, bu
 \tikzstyle{level 2}=[sibling distance=1in]
 \coordinate
     child {
-        child { node { |Leaf 1| } }
-        child { node { |Leaf 2| } }
+        child { node[leaf] { |Leaf 1| } }
+        child { node[leaf] { |Leaf 2| } }
     }
     child {
-        child { node { |Leaf 3| } }
-        child { node { |Leaf 4| } }
+        child { node[leaf] { |Leaf 3| } }
+        child { node[leaf] { |Leaf 4| } }
     }
     child {
-        child { node { |Leaf 5| } }
-        child { node { |Leaf 6| } }
+        child { node[leaf] { |Leaf 5| } }
+        child { node[leaf] { |Leaf 6| } }
     };
 \end{tikzpicture}
 \end{center}
@@ -341,12 +347,12 @@ should be immediately flattened out to
 \begin{tikzpicture}
 \tikzstyle{level 1}=[sibling distance=1in]
 \coordinate
-    child { node { |Leaf 1| } }
-    child { node { |Leaf 2| } }
-    child { node { |Leaf 3| } }
-    child { node { |Leaf 4| } }
-    child { node { |Leaf 5| } }
-    child { node { |Leaf 6| } };
+    child { node[leaf] { |Leaf 1| } }
+    child { node[leaf] { |Leaf 2| } }
+    child { node[leaf] { |Leaf 3| } }
+    child { node[leaf] { |Leaf 4| } }
+    child { node[leaf] { |Leaf 5| } }
+    child { node[leaf] { |Leaf 6| } };
 \end{tikzpicture}
 \end{center}
 
@@ -360,27 +366,26 @@ Our leaves are simply singleton lists, and the grafting operation temporarily ma
 
 Now we can reimplement |fork| as
 
-> fork' a b = [a,b]
+> fork_v2 a b = [a,b]
 
 and reimplement our search:
 
-> stage3'''' = do
->   a <- fork' 2 5
->   b <- fork' (a+2) (a+5)
->   fork' (b+2) (b+5)
+> stage3_v5 = do
+>   a <- fork_v2 2 5
+>   b <- fork_v2 (a+2) (a+5)
+>   fork_v2 (b+2) (b+5)
 
 We don't need the |fork| function. we could have simply written:
 
-> stage3''''' = do
+> stage3_v6 = do
 >   a <- [2, 5]
 >   b <- [a+2, a+5]
 >   [b+2, b+5]
 
 Of course we can put more than two elements into those lists for more complex searches.
-
 But there's one more transformation I want to perform on this code:
 
-> stage3'''''' = do
+> stage3_v7 = do
 >   a <- [2, 5]
 >   b <- [2, 5]
 >   c <- [2, 5]
