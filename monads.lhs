@@ -285,8 +285,12 @@ The first expression builds a two stage tree |y| and then grafts into that using
 
 The monad laws just express the property that |>>=| is intended to act like tree grafting.
 
-\section{Equating Trees}
-Suppose we used the |Tree| monad to perform a combiantorial search and it resulted in the tree |Fork (Leaf 1) (Fork (Leaf 2) (Leaf 3))|. Chances are, this contains more information than we needed. If we only need the leaf values, $1$, $2$ and $3$ then have no need for the tree structure. We could written a function to run through our tree extracting all of the values from it:
+\section{Reduced Trees}
+Suppose we used the |Tree| monad to perform a combiantorial search and it resulted in the tree
+
+< Fork (Leaf 1) (Fork (Leaf 2) (Leaf 3))
+
+Chances are, this contains more information than we needed. If we only need the leaf values, $1$, $2$ and $3$ then have no need for the tree structure. We could write a function to run through our tree extracting all of the values from it:
 
 > runTree :: Tree a -> [a]
 > runTree Nil = []
@@ -312,7 +316,7 @@ It seems a little inefficient to build a tree and then discard it at the end. It
 \end{tikzpicture}
 \end{center}
 
-The problem now is that grafting seems like it ought to make the tree deeper. The solution is to define grafting for lists in such a way that the resulting tree is flattened back out again. So a tree like
+The problem now is that grafting seems like it ought to make the tree deeper, but then it'd no longer be a simple list. The solution is to define grafting for lists in such a way that the resulting tree is flattened back out again. So a tree like
 \begin{center}
 \begin{tikzpicture}
 \tikzstyle{level 1}=[sibling distance=2in]
@@ -382,7 +386,7 @@ But there's one more transformation I want to perform on this code:
 >   c <- [2, 5]
 >   return (a+b+c)
 
-I hope you can see how this works. The last two lines build a list parameterised by the values |a| and |b|. That list is grafted into the list made by the |b <- ...| line. And that list is grafted into the list made at the |a <- ...| line.
+I hope you can see how this works. The last two lines build a list parameterised by the values |a| and |b|. That list is grafted into the list made at the |b <- ...| line. And that list is grafted into the list made at the |a <- ...| line.
 
 There's another way of looking at this code. It's a lot like imperative code. For example the Python
 \begin{verbatim}
@@ -421,7 +425,7 @@ Here's a familiar kind of flowchart:
 
 For now I want to concentrate on how we build these trees and then later talk about actually getting them to perform an action.
 
-The idea is that we have a state variable of some type and nodes to set and get this state. The |put| function represents putting its argument into the state, and the |get| function is used to represent a branch depending on the value of the state. We also have leaf nodes representing the final value of our computation.
+The idea now is that we have a mutable state variable of some type and nodes to set and get this state. The |put| function represents putting its argument into the state. The |get| function is used to represent getting data from the current state, selecting a branch below according to its value. We also have leaf nodes representing the final value of our computation. With the list monad, a branching tree meant executing all branches. With the |State| monad we'll just execute one branch at any branch point, the one corresponding to the value in the state at that point.
 
 More precisely, we have a type constructor |State| that builds a flowchart tree type from two types, |s| and |a|. |s| is the type of the state, and |a| is the type of the leaf nodes. We also have two functions, not part of the monad interface, that we can use to construct flowcharts. |put :: s -> State s ()| builds a tree that looks like this:
 
@@ -435,7 +439,7 @@ More precisely, we have a type constructor |State| that builds a flowchart tree 
 
 This tree represents storing the value |x| in our state. |()| is an element of the type with one element, also called |()|. You can ignore this value, it's just there so that we have a leaf node suitable for grafting.
 
-We also have |get| nodes. In the first flowchart example we use state of type |Bool| so we only needed a two way branch. More generally we have state of type |s| and to cover them all we need infinitely many branches, and it piuts the value of the state into each branch. So, for example, |get :: State s s| can be thought of as looking like
+We also have |get| nodes. In the first flowchart example we use state of type |Bool| so we only needed a two way branch. More generally we have state of type |s| and to cover them all we need infinitely many branches, and for each branch we have a leaf whose value corresponds to the branch selected by the current state. So, for example, |get :: State s s| can be thought of as looking like
 
 \begin{center}
 \begin{tikzpicture}[node distance = 3cm, auto]
@@ -459,7 +463,7 @@ We also have |get| nodes. In the first flowchart example we use state of type |B
 \end{tikzpicture}
 \end{center}
 
-The labels emerging from the |get| specify which branch is taken as a function of the state. This could get a little unwieldy so it's easier to draw all of the branches emerging from the |get| by a scheme like:
+The labels emerging from the |get| specify which branch is taken as a function of the state. The |get| function builds this entire thing for us, including the infinity of leaves. This could get a little unwieldy so it's easier to draw all of the branches emerging from the |get| by a scheme like:
 
 \begin{center}
 \begin{tikzpicture}[node distance = 3cm, auto]
@@ -491,7 +495,7 @@ Note that though we have drawn two branches we are still representing an infinit
 < do
 <   get
 
-which simply gives us a tree with levaes corresponding to the value of the state. Now we want to graft a simple leaf containing a string on the left.
+which simply gives us a tree with leaves corresponding to the value of the state. Now we want to graft a simple leaf containing a string on the left.
 
 < do
 <   s <- get
@@ -522,12 +526,12 @@ We don't care about the leaf value that |put| gives us so I stored the result in
 >           put (s+1)
 >           return "odd"
 
-Despite this code using an abstract interface to build trees, it looks remarkably like straightforward imperative code. In a sense it is - we're building an abstract syntax tree for an imperative mini-DSL inside Haskell. The last step is to actually interpret the tree. The standard prelude provides a Haskell function |runState :: State s a -> s -> (a, s)| that converts one of these trees to a function that takes an initial state value as argument, and returns both the final leaf value and the final state. We can test it out:
+Despite this code using an abstract interface to build trees, it looks remarkably like straightforward imperative code. In a sense it is - we're building an abstract syntax tree for an imperative mini-DSL inside Haskell. But this just builds a data structure. It doesn't yet do anything. The last step is to actually interpret the tree. The standard prelude provides a Haskell function |runState :: State s a -> s -> (a, s)| that converts one of these trees to a function that takes an initial state value as argument, and returns both the final leaf value and the final state. We can test it out:
 
 > go1 = runState ex1 26
 > go2 = runState ex1 27
 
-You might think this is all inefficient, first building a tree, and then implementing it. But the same trick as with the list monad is used. The |State| type is simply a wrapper around the final type we want, |s -> (a, s)| and a suitable value is constructed at each graft.
+You might think this is all inefficient, first building a tree, and then implementing it. But the same trick as with the list monad is used. The |State| type is simply a wrapper around the final type we want, |s -> (a, s)| and a suitable value is constructed at each graft rather than waiting for the end. Nonetheless, it's still convenient to think in terms of building trees.
 
 \section{Summary}
 Instances of type class |Monad| can be thought of as trees describing `computations'. The |Monad| interface provides a way to graft subtrees into trees. There are as many types of `computation' as there are interpreters for tree structures. In practice the interpretation is interleaved with the graft operation so that we don't have separate tree-building and interpretation phases.
