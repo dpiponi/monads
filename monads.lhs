@@ -3,12 +3,6 @@
 \usepackage{amssymb} 
 \usepackage{graphicx} 
 \usepackage{hyperref}
-
-%if False
-
-> main = print stage3_v7
-
-%endif
 \usepackage{eepic}
 \usepackage{tikz}
 \usetikzlibrary{shapes,arrows}
@@ -20,7 +14,6 @@
 %if False
 
 > import Control.Monad.State
-> import Control.Monad.Error
 
 %endif
 
@@ -33,12 +26,12 @@
 \section{Goals and Prerequisites}
 This article is intended to give an elementary introduction to an aspect of monads not covered in most introductions. The reader is expected to know some basics of Haskell, for example what a type class is and what a lambda term is. They are also expected to be familiar with the usual notion of a tree from computer science.
 
-The original source code to this document is written in literate Haskell and can be executed with ghc.
+The original \href{https://dl.dropbox.com/u/828035/Monads/monads.lhs}{source code} to this document is written in literate Haskell and can be executed with ghc.
 
 \section{Trees}
-Haskell type classes are interfaces shared by different types, and Haskell's |Monad| type class is no different. It describes an interface common to many types of tree structure, all of which share the notion of a {\em leaf node} and {\em grafting}. These are straightforward notions from computer science and are easily illustrated.
+Haskell type classes are interfaces shared by different types, and Haskell's |Monad| type class is no different. It describes an interface common to many types of tree structure, all of which share the notion of a {\em leaf node} and {\em grafting}.
 
-So let's start by looking at the type class definition:
+Let's start by looking at the type class definition:
 
 < class Monad m where
 <   return :: a -> m a
@@ -48,7 +41,7 @@ Here |m| is a type constructor. Given a type |a|, |m a| is a new type with these
 
 > data Tree a = Fork (Tree a) (Tree a) | Leaf a | Nil deriving Show
 
-|Tree| takes a type |a| and makes a new type from it |Tree a|. Elements of type |Tree a| are either forks with two subtrees, leaves containing a single element of type |a| or a empty trees called |Nil|.
+|Tree| takes a type |a| and makes a new type from it |Tree a|. Elements of type |Tree a| are either forks with two subtrees, leaves containing a single element of type |a|, or empty trees called |Nil|.
 
 Here's a typical expression representing a tree:
 
@@ -77,16 +70,18 @@ We can draw this in the standard way:
 \end{tikzpicture}
 \end{center}
 
+Although there are two different kinds of terminal node, |Leaf|s and |Nil|s, our interest will be focussed on the |Leaf|s.
+
 To show how the monad interface works we can start defining a |Monad| instance for |Tree|:
 
 > instance Monad Tree where
 >   return a = Leaf a
 
-The function |return|, despite the name, is nothing more than a function for creating leaf nodes. The next function is a grafting operation:
+The function |return|, despite the name, is nothing more than a function for creating |Leaf| nodes. The next function is a grafting operation:
 
->   Nil      >>= f = Nil
->   Leaf a   >>= f = f a
->   Fork u v >>= f = Fork (u >>= f) (v >>= f)
+>   Nil       >>= f = Nil
+>   Leaf a    >>= f = f a
+>   Fork u v  >>= f = Fork (u >>= f) (v >>= f)
 
 The idea is that given a tree we'll replace every leaf node with a new subtree. We need a scheme to be able to specify what trees we are grafting in to replace which leaves. One way to do this is like this: we'll use the value stored in the leaf to specify what tree to graft in its place, and we'll make the specification by giving a function mapping leaf values to trees. I'll illustrate it pictorially first, with a simple tree. Consider:
 
@@ -215,9 +210,9 @@ Our two stage tree is given by
 
 Now we want to replace each of these leaf nodes with a new subtree. We can reuse our rule to get
 
-> stage3_v1 = stage2 >>= choose
+> stage3 = stage2 >>= choose
 
-If you run the code you'll see that |stage3_v1| has all of the possibilities stored in the tree and we have solved our problem.
+If you run the code you'll see that |stage3| has all of the possibilities stored in the tree and we have solved our problem.
 
 We can reorganise this code a little. A helper |fork| function saves on typing:
 
@@ -225,23 +220,23 @@ We can reorganise this code a little. A helper |fork| function saves on typing:
 
 I've implemented |choose| as a separate function but we could write out everything longhand as follows:
 
-> stage3_v2 = (  fork 2 5           >>= \a ->
+> stage3_v2 = (fork 2 5           >>= \a ->
 >              fork (a+2) (a+5))  >>= \b ->
 >              fork (b+2) (b+5)
 
-I've simply substituted lambda terms for the function choose. We can now see the three stages clearly as one line after another. We can read this code from top to bottom as a sequence of three operations interpreting the |fork| function as something like the Unix |fork| function. After a fork, the remainder of the lines of code are executed {\em twice}, each time using a different value. Writing it out fully makes it clear that we can easily change the choice at each line, for example to use sets other than $\{2, 5\}$.
+I've simply substituted lambda terms for the function |choose|. We can now see the three stages clearly as one line after another. We can read this code from top to bottom as a sequence of three operations interpreting the |fork| function as something like the Unix |fork| function. After a fork, the remainder of the lines of code are executed {\em twice}, each time using a different value. Writing it out fully makes it clear that we can easily change the choice at each line, for example to use sets other than $\{2, 5\}$.
 
-An important thing to notice about our three stage tree is that there were two ways of building it. I first built a two stage tree and then grafted a one stage tree into each of its leaves. But I could have built a one stage tree and substituted a two stage tree into each of its leaves. We can see this diagrammatically as:
+An important thing to notice about our three stage tree is that there were two ways of building it. I first built a two stage tree and then grafted a one stage tree into each of its leaves. But I could have built a one stage tree and substituted a two stage tree into each of its leaves.
 
 Our alternative code looks like this:
 
-> stage3_v3 =  fork 2 5          >>= \a ->
+> stage3_v3 = fork 2 5          >>= \a ->
 >             fork (a+2) (a+5)  >>= \b ->
 >             fork (b+2) (b+5)
 
 It's almost the same, I just removed a pair of parentheses.
 
-We can try to step back a bit and think about what that code means. Each time we see |... >>= \a -> ...| we can think of |a| as a handle onto the leaves of the tree on the left and the tree on the right is what those leaves get replaced with. If we're going to do lots of grafting with lambda terms like this then it'd be nice to have special syntax. This is exactly what Haskell |do| notation provides. After a |do|, this fragment of code can be written as
+We can try to step back a bit and think about what that code means. Each time we see |... >>= \a -> ...| we can think of |a| as a handle onto the leaves of the tree on the left and the tree on the right is what those leaves get replaced with. If we're going to do lots of grafting with lambda terms like this then it'd be nice to have special syntax. This is exactly what Haskell |do|-notation provides. After a |do|, this fragment of code can be written as
 
 <   a <- ...
 <   ...
@@ -257,7 +252,7 @@ Now it really is looking like imperative code with a Unix-like fork function. We
 
 < a <- ...
 
-means exactly this: using |a| to represent the value in the leaf, replace all of the leaves on the right hand side with the tree defined by the rest of this |do| block.
+means exactly this: using |a| to represent the value in the leaf, replace all of the leaves on the right hand side with the tree defined by the rest of this |do| block. The sequence of lines in a |do| block are a sequence of operations to graft subtrees one below the other.
 
 \section{The Monad Laws}
 There are some properties that we can expect to hold for all trees. The first of these is this: if we graft with the rule |\a -> return a| then we're just replacing a leaf with itself. This rule is the first {\em monad law} and a monad isn't a monad unless it holds. We can write it using |do| notation as:
@@ -287,12 +282,12 @@ Consider again the two ways of grafting the three stage combinatorial search tre
 <   y <- f x
 <   g y
 
-The first expression builds a two stage tree |y| and then grafts into that using the function |g|. The second expression grafts a two stage tree directly into the tree m. We'd expect this to hold for any kind of tree and it is known as the third monad law.
+The first expression builds a two stage tree |y| and then grafts into that using the function |g|. The second expression grafts a two stage tree directly into the tree |m|. We'd expect this to hold for any kind of tree and it is known as the third monad law.
 
 The monad laws just express the property that |>>=| is intended to act like tree grafting.
 
 \section{Reduced Trees}
-Suppose we used the |Tree| monad to perform a combiantorial search and it resulted in the tree
+Suppose we used the |Tree| monad to perform a combinatorial search and it resulted in the tree
 
 < Fork (Leaf 1) (Fork (Leaf 2) (Leaf 3))
 
@@ -303,7 +298,7 @@ Chances are, this contains more information than we needed. If we only need the 
 > runTree (Leaf a) = [a]
 > runTree (Fork a b) = runTree a ++ runTree b
 
-It seems a little inefficient to build a tree and then discard it at the end. It would be more efficient to build the list directly as we go along and never make an intermediate tree. But another way to look at it is to consider that a list is itself a type of tree. You can think of the list elements as being the children of a root, but that the children have no children of their own. Here's a picture of the list |[1, 2, 3]|:
+It seems a little inefficient to build a tree and then discard it at the end. It would be more efficient to build the list directly as we go along and never make an intermediate tree. Another way to look at it is to consider that a list is itself a type of tree. You can think of the list elements as being the children of a root, but that the children have no children of their own. Here's a picture of the list |[1, 2, 3]|:
 
 \begin{center}
 \begin{tikzpicture}
@@ -359,8 +354,8 @@ should be immediately flattened out to
 We can implement this as follows:
 
 < instance Monad [] where
-<   return a = [a]
-<   a >>= f = concat (map f a)
+<   return a  = [a]
+<   a >>= f   = concat (map f a)
 
 Our leaves are simply singleton lists, and the grafting operation temporarily makes a deeper list of lists that is flattened out to a single list using |concat|.
 
@@ -382,7 +377,7 @@ We don't need the |fork| function. we could have simply written:
 >   b <- [a+2, a+5]
 >   [b+2, b+5]
 
-Of course we can put more than two elements into those lists for more complex searches.
+Of course we can now put more than two elements into those lists for more complex searches.
 But there's one more transformation I want to perform on this code:
 
 > stage3_v7 = do
@@ -409,9 +404,9 @@ To illustrate how flexible monads are we'll now look at a completely different t
 Here's a familiar kind of flowchart:
 
 \tikzstyle{decision} = [diamond, draw, fill=blue!20, 
-    text width=4.5em, text badly centered, node distance=3cm, inner sep=0pt]
+    text width=4em, text badly centered, node distance=3cm, inner sep=0pt]
 \tikzstyle{block} = [rectangle, draw, fill=blue!20, 
-    text width=6em, text centered, rounded corners, minimum height=4em]
+    text width=6em, text centered, rounded corners, minimum height=3em]
 \tikzstyle{line} = [draw, -latex']
 
 \begin{center}
@@ -444,7 +439,7 @@ More precisely, we have a type constructor |State| that builds a flowchart tree 
 
 This tree represents storing the value |x| in our state. |()| is an element of the type with one element, also called |()|. You can ignore this value, it's just there so that we have a leaf node suitable for grafting.
 
-We also have |get| nodes. In the first flowchart example we use state of type |Bool| so we only needed a two way branch. More generally we have state of type |s| and to cover them all we need infinitely many branches, and for each branch we have a leaf whose value corresponds to the branch selected by the current state. So, for example, |get :: State s s| can be thought of as looking like
+We also have |get| nodes. In the first flowchart example of this section I illustrated state of type |Bool| so we only needed a two way branch. More generally we have state of type |s| and to cover them all we need infinitely many branches, and for each branch we have a leaf whose value corresponds to the branch selected by the current state. So, for example, |get :: State s s| can be thought of as looking like
 
 \begin{center}
 \begin{tikzpicture}[node distance = 3cm, auto]
@@ -468,7 +463,7 @@ We also have |get| nodes. In the first flowchart example we use state of type |B
 \end{tikzpicture}
 \end{center}
 
-The labels emerging from the |get| specify which branch is taken as a function of the state. The |get| function builds this entire thing for us, including the infinity of leaves. This could get a little unwieldy so it's easier to draw all of the branches emerging from the |get| by a scheme like:
+The labels emerging from the |get| specify which branch is taken as a function of the state. The |get| function builds this entire thing for us, including the infinity of leaves. (Though I've also used |get| to label just the branch diamond in its own.) This could get a little unwieldy so it's easier to draw all of the branches emerging from the |get| by a scheme like:
 
 \begin{center}
 \begin{tikzpicture}[node distance = 3cm, auto]
@@ -479,7 +474,7 @@ The labels emerging from the |get| specify which branch is taken as a function o
 \end{tikzpicture}
 \end{center}
 
-Let's consider an example. We'll construct a block of code which has |Integer| valued state. If the state is odd then it'll add one to it and return the string |"odd"|, otherwise it just returns the string |"even"|. We can draw this is a flowchart:
+Let's consider an example. We'll construct a block of code which has |Integer| valued state. If the state is odd then it'll add one to it and return the string |"odd"|, otherwise it just returns the string |"even"|. We can draw this as a flowchart:
 
 \begin{center}
 \begin{tikzpicture}[node distance = 3cm, auto]
@@ -520,7 +515,7 @@ On the right we need to graft twice. So we get
 <           _ <- put (s+1)
 <           return "odd"
 
-We don't care about the leaf value that |put| gives us so I stored the result in |_|. Haskell do-notation allows us to simplify that further by simply omitting the |_ <-|. So here is the final function to build our tree:
+We don't care about the leaf value that |put| gives us so I stored the result in |_|. Haskell |do|-notation allows us to simplify that further by simply omitting the |_ <-|. So here is the final function to build our tree:
 
 > ex1 = do
 >   s <- get
@@ -531,7 +526,7 @@ We don't care about the leaf value that |put| gives us so I stored the result in
 >           put (s+1)
 >           return "odd"
 
-Despite this code using an abstract interface to build trees, it looks remarkably like straightforward imperative code. In a sense it is - we're building an abstract syntax tree for an imperative mini-DSL inside Haskell. But this just builds a data structure. It doesn't yet do anything. The last step is to actually interpret the tree. The standard prelude provides a Haskell function |runState :: State s a -> s -> (a, s)| that converts one of these trees to a function that takes an initial state value as argument, and returns both the final leaf value and the final state. We can test it out:
+Despite this code using an abstract interface to build trees, it looks remarkably like straightforward imperative code. In a sense it is - we're building an abstract syntax tree for an imperative mini-DSL inside Haskell. But this just builds a data structure. It doesn't yet do anything. The last step is to actually interpret the tree. The Haskell libraries provide a function |runState :: State s a -> s -> (a, s)| that converts one of these trees to a function that takes an initial state value as argument, and returns both the final leaf value and the final state. We can test it out:
 
 > go1 = runState ex1 26
 > go2 = runState ex1 27
