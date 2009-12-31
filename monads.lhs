@@ -26,9 +26,12 @@
 
 \begin{document} 
 
-\title{Monads}
+\title{haskell Monads as Trees}
 \authorinfo{Dan Piponi}{}{dpiponi@@gmail.com}
 \maketitle
+
+\section{Goals and Prerequisites}
+This article is intended to give a different approach to monads from the usual for readers unfamiliar with monads. The reader is expected to know some basics of Haskell, for example what a type class is and what a lambda term is. They are also expected to be familiar with the usual notion of a tree from computer science.
 
 \section{Trees}
 Haskell type classes are interfaces shared by different types and Haskell's |Monad| type class is no different. It describes an interface common to many types of tree structure, all of which share the notion of a {\em leaf node} and {\em grafting}. These are straightforward notions from computer science and are easily illustrated.
@@ -382,12 +385,13 @@ But there's one more transformation I want to perform on this code:
 I hope you can see how this works. The last two lines build a list parameterised by the values |a| and |b|. That list is grafted into the list made by the |b <- ...| line. And that list is grafted into the list made at the |a <- ...| line.
 
 There's another way of looking at this code. It's a lot like imperative code. For example the Python
-
-< for a in [2, 5]:
-<   for b in [2, 5]:
-<       for c in [2, 5]:
-<           results.append(a, b, c)
-
+\begin{verbatim}
+results = []
+for a in [2, 5]:
+  for b in [2, 5]:
+      for c in [2, 5]:
+          results.append(a+b+c)
+\end{verbatim}
 This is a common characteristic of many types of monad: we build a tree structure that represents a computation (for example, an imperative one with loops) and then interpret it using something like |runTree|. In many cases we can do the interpretation as we go along and so we don't need a separate interpretation step at the end, as we just did with lists.
 
 \section{Flowcharts and State}
@@ -527,6 +531,9 @@ You might think this is all inefficient, first building a tree, and then impleme
 
 \section{Summary}
 Instances of type class |Monad| can be thought of as trees describing `computations'. The |Monad| interface provides a way to graft subtrees into trees. There are as many types of `computation' as there are interpreters for tree structures. In practice the interpretation is interleaved with the graft operation so that we don't have separate tree-building and interpretation phases.
+
+\section{Technical Note for the Mathematically Inclined}
+Describing monads as trees with grafting is slightly inaccurate. Apart from in the |Tree| case, in the examples above |>>=| doesn't just graft, it also performs a reduction operation of some sort. However, it is accurate to talk of elements of these monads as representing equivalence classes of trees. In this case |>>=| is grafting lowered to the space of trees modulo the equivalence.
 
 \newcommand{\F}{\mathsf}
 %format pack  = "\F{pack}"
