@@ -15,7 +15,7 @@
 
 \begin{document} 
 
-\title{Monads are Trees}
+\title{Monads are Trees with Grafting}
 \author{Dan Piponi\\\href{http://blog.sigfpe.com}{A Neighborhood of Infinity}}
 \maketitle
 
@@ -206,9 +206,20 @@ Our two stage tree is given by
 
 Now we want to replace each of these leaf nodes with a new subtree. We can reuse our rule to get
 
+%format stage3  = "\mathop{stage3}_1"
+%format stage3_v2  = "\mathop{stage3}_2"
+%format stage3_v3  = "\mathop{stage3}_3"
+%format stage3_v4  = "\mathop{stage3}_4"
+%format stage3_v5  = "\mathop{stage3}_5"
+%format stage3_v6  = "\mathop{stage3}_6"
+%format stage3_v7  = "\mathop{stage3}_7"
+
 > stage3 = stage2 >>= choose
 
 If you run the code you'll see that |stage3| has all of the possibilities stored in the tree and we have solved our problem.
+
+%format fork  = "\mathop{fork}_1"
+%format fork_v2  = "\mathop{fork}_2"
 
 We can reorganise this code a little. A helper |fork| function saves on typing:
 
