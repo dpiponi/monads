@@ -22,7 +22,7 @@
 \section{Goals and Prerequisites}
 This article is intended to give an elementary introduction to an aspect of monads not covered in most introductions. The reader is expected to know some basics of Haskell, for example what a type class is and what a lambda term is. They are also expected to be familiar with the usual notion of a tree from computer science. No category theory mentioned anywhere but in this sentence.
 
-The original \href{http://github.com/dpiponi/monads/blob/master/monads.lhs}{source code} to this document is written in literate Haskell and can be executed with ghc.
+The original \href{https://dl.dropbox.com/u/828035/Monads/monads.lhs}{source code} to this document is written in literate Haskell and can be executed with ghc.
 
 \section{Trees}
 Haskell type classes are interfaces shared by different types, and Haskell's |Monad| type class is no different. It describes an interface common to many types of tree structure, all of which share the notion of a {\em leaf node} and {\em grafting}.
