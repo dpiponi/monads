@@ -1,4 +1,4 @@
-\documentclass{article} 
+\documentclass{article}
 \usepackage{hyperref}
 \usepackage{tikz}
 \usetikzlibrary{shapes,arrows}
@@ -13,7 +13,7 @@
 
 %endif
 
-\begin{document} 
+\begin{document}
 
 \title{Monads are Trees with Grafting}
 \author{Dan Piponi\\\href{http://blog.sigfpe.com}{A Neighborhood of Infinity}}
@@ -47,7 +47,7 @@ Here's a typical expression representing a tree:
 
 We can draw this in the standard way:
 
-\tikzstyle{leaf} = [draw, fill=green!20, 
+\tikzstyle{leaf} = [draw, fill=green!20,
     text centered, rounded corners, minimum height=1em]
 \tikzstyle{nonleaf} = []
 \begin{center}
@@ -410,9 +410,9 @@ To illustrate how flexible monads are we'll now look at a completely different t
 
 Here's a familiar kind of flowchart:
 
-\tikzstyle{decision} = [diamond, draw, fill=blue!20, 
+\tikzstyle{decision} = [diamond, draw, fill=blue!20,
     text width=4em, text badly centered, node distance=3cm, inner sep=0pt]
-\tikzstyle{block} = [rectangle, draw, fill=blue!20, 
+\tikzstyle{block} = [rectangle, draw, fill=blue!20,
     text width=6em, text centered, rounded corners, minimum height=3em]
 \tikzstyle{line} = [draw, -latex']
 
@@ -546,4 +546,4 @@ Instances of type class |Monad| can be thought of as trees describing `computati
 \section{Technical Note for the Mathematically Inclined}
 Describing monads as trees with grafting is slightly inaccurate. Apart from in the |Tree| case, in the examples above |>>=| doesn't just graft, it also performs a reduction operation of some sort. However, it is accurate to talk of elements of these monads as representing equivalence classes of trees. In this case |>>=| is grafting lowered to the space of trees modulo the equivalence.
 
-\end{document} 
+\end{document}
